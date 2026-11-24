@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Audit Log</h2>
+<p>Every change is recorded with the user and time (UTC). Latest 200 entries.</p>
+<div class="scroll">
+<table>
+    <tr><th>Time (UTC)</th><th>User</th><th>Action</th><th>Record</th><th>Old</th><th>New</th></tr>
+    {% for r in rows %}
+    <tr>
+        <td>{{ r.created_at }}</td>
+        <td>{{ r.full_name or '-' }}</td>
+        <td>{{ r.action }}</td>
+        <td>{{ r.table_name }} #{{ r.record_id }}</td>
+        <td>{{ r.old_value or '' }}</td>
+        <td>{{ r.new_value or '' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">No entries yet</td></tr>
+    {% endfor %}
+</table>
+</div>
+{% endblock %}

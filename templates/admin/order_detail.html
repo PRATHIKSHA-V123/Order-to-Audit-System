@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="{{ url_for('admin.orders') }}">&larr; All orders</a></p>
+<h2>Order #{{ order.id }} - {{ order.customer }}</h2>
+<p>State: <strong>{{ order.state }}</strong> &nbsp;|&nbsp; Date: {{ order.order_date }}
+   &nbsp;|&nbsp; Status: <span class="badge">{{ status_label(order.status, invoice is not none) }}</span></p>
+
+<h3>Items and stock check</h3>
+{% if order.status == 'pending' %}
+<form method="post" action="{{ url_for('admin.update_qty', order_id=order.id) }}" class="plain">
+{% endif %}
+<div class="scroll">
+<table>
+    <tr><th>Product</th><th>Rate</th><th>Quantity</th><th>Stock available</th><th>Shortage</th></tr>
+    {% for l in lines %}
+    <tr>
+        <td>{{ l.name }}</td>
+        <td>{{ l.rate_paise | rupees }}</td>
+        <td>
+            {% if order.status == 'pending' %}
+            <input type="number" min="1" name="qty_{{ l.id }}" value="{{ l.qty_ordered }}" style="width:100px">
+            {% else %}{{ l.qty_ordered }}{% endif %}
+        </td>
+        <td>{{ l.available }}</td>
+        <td>{% if l.shortage > 0 and order.status in ('pending', 'approved') %}<span class="flag">{{ l.shortage }}</span>{% else %}0{% endif %}</td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% if order.status == 'pending' %}
+<button type="submit">Save quantities</button>
+</form>
+{% endif %}
+
+<p>Order value before tax: <strong>{{ total_paise | rupees }}</strong></p>
+
+{% if has_shortage and order.status in ('pending', 'approved') %}
+<p class="flag">Stock is short. The invoice cannot be created until stock is enough.</p>
+{% endif %}
+
+<div class="actions">
+    {% if order.status == 'pending' %}
+    <form method="post" action="{{ url_for('admin.approve', order_id=order.id) }}" class="plain"><button>Approve</button></form>
+    <form method="post" action="{{ url_for('admin.reject', order_id=order.id) }}" class="plain"><button class="danger">Reject</button></form>
+    {% endif %}
+    {% if order.status == 'approved' and not invoice %}
+    <form method="post" action="{{ url_for('admin.invoice', order_id=order.id) }}" class="plain"><button>Create GST invoice</button></form>
+    {% endif %}
+    {% if invoice and order.status == 'approved' %}
+    <form method="post" action="{{ url_for('admin.dispatch', order_id=order.id) }}" class="plain"><button>Record dispatch</button></form>
+    {% endif %}
+</div>
+
+{% if invoice %}
+<h3>Invoice {{ invoice.invoice_no }}</h3>
+<div class="scroll">
+<table>
+    <tr><th>Taxable value</th><th>CGST</th><th>SGST</th><th>IGST</th><th>Total</th><th>Outstanding</th></tr>
+    <tr>
+        <td>{{ invoice.taxable_paise | rupees }}</td>
+        <td>{{ invoice.cgst_paise | rupees }}</td>
+        <td>{{ invoice.sgst_paise | rupees }}</td>
+        <td>{{ invoice.igst_paise | rupees }}</td>
+        <td><strong>{{ invoice.total_paise | rupees }}</strong></td>
+        <td><strong>{{ outstanding | rupees }}</strong></td>
+    </tr>
+</table>
+</div>
+<p><a href="{{ url_for('reports.invoice_pdf', invoice_id=invoice.id) }}" target="_blank">Open invoice PDF</a></p>
+
+{% if credit_note %}
+<p class="flag">Cancelled by credit note {{ credit_note.credit_no }} on {{ credit_note.note_date }}
+   for {{ credit_note.total_paise | rupees }}. Reason: {{ credit_note.reason }}</p>
+{% else %}
+<form method="post" action="{{ url_for('admin.cancel_invoice', order_id=order.id) }}">
+    <label>Cancel this invoice with a credit note. Reason:</label>
+    <input type="text" name="reason" required>
+    <button type="submit" class="danger">Cancel invoice</button>
+</form>
+{% endif %}
+
+<h3>Payments</h3>
+{% if payments %}
+<div class="scroll">
+<table>
+    <tr><th>Date</th><th>Amount</th><th>Mode</th></tr>
+    {% for p in payments %}
+    <tr><td>{{ p.pay_date }}</td><td>{{ p.amount_paise | rupees }}</td><td>{{ p.mode }}</td></tr>
+    {% endfor %}
+</table>
+</div>
+{% else %}
+<p>No payments yet.</p>
+{% endif %}
+
+{% if outstanding > 0 %}
+<form method="post" action="{{ url_for('admin.payment', order_id=order.id) }}">
+    <label>Payment received (Rs)</label>
+    <input type="number" name="amount" step="0.01" min="0.01" required>
+    <label>Mode</label>
+    <select name="mode">
+        <option>Cash</option>
+        <option>UPI</option>
+        <option>Bank transfer</option>
+    </select>
+    <button type="submit">Record payment</button>
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Orders</h2>
+<div class="scroll">
+<table>
+    <tr><th>#</th><th>Date</th><th>Customer</th><th>Salesman</th><th>Value (before tax)</th><th>Status</th><th></th></tr>
+    {% for o in orders %}
+    <tr>
+        <td>{{ o.id }}</td>
+        <td>{{ o.order_date }}</td>
+        <td>{{ o.customer }}</td>
+        <td>{{ o.salesman }}</td>
+        <td>{{ o.value_paise | rupees }}</td>
+        <td><span class="badge">{{ status_label(o.status, o.has_invoice) }}</span></td>
+        <td><a href="{{ url_for('admin.order_detail', order_id=o.id) }}">Open</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">No orders yet</td></tr>
+    {% endfor %}
+</table>
+</div>
+{% endblock %}

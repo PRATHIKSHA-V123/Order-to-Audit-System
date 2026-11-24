@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>New Order</h2>
+<form method="post">
+    <label>Customer</label>
+    <select name="customer_id" required>
+        <option value="">-- choose customer --</option>
+        {% for c in customers %}
+        <option value="{{ c.id }}">{{ c.name }} ({{ c.state }})</option>
+        {% endfor %}
+    </select>
+
+    {% for p in products %}
+    <label>{{ p.name }} - {{ p.price_paise | rupees }} per packet</label>
+    <input type="number" name="qty_{{ p.id }}" min="0" placeholder="Quantity (packets)">
+    {% endfor %}
+
+    <button type="submit">Submit order</button>
+</form>
+{% endblock %}
