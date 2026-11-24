@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>GST Summary (outward supplies)</h2>
+<p>Shaped for GSTR-1 (B2B invoices, see Sales Register) and GSTR-3B table 3.1(a).</p>
+<form method="get" class="plain">
+    <label>From</label>
+    <input type="date" name="date_from" value="{{ date_from }}" style="max-width:200px">
+    <label>To</label>
+    <input type="date" name="date_to" value="{{ date_to }}" style="max-width:200px">
+    <button type="submit">Filter</button>
+</form>
+<p><a href="{{ url_for('reports.gst_csv', date_from=date_from, date_to=date_to) }}">Download CSV (opens in Excel)</a></p>
+
+<div class="scroll">
+<table>
+    <tr><th>Place of supply</th><th>Invoices</th><th>Taxable</th><th>CGST</th><th>SGST</th><th>IGST</th><th>Invoice value</th></tr>
+    {% for r in rows %}
+    <tr>
+        <td>{{ r.state }}</td><td>{{ r.invoices }}</td>
+        <td>{{ r.taxable_paise | rupees }}</td><td>{{ r.cgst_paise | rupees }}</td>
+        <td>{{ r.sgst_paise | rupees }}</td><td>{{ r.igst_paise | rupees }}</td>
+        <td>{{ r.total_paise | rupees }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">No invoices in this period</td></tr>
+    {% endfor %}
+    {% if rows %}
+    <tr>
+        <td><strong>Total</strong></td><td><strong>{{ totals.invoices }}</strong></td>
+        <td><strong>{{ totals.taxable_paise | rupees }}</strong></td>
+        <td><strong>{{ totals.cgst_paise | rupees }}</strong></td>
+        <td><strong>{{ totals.sgst_paise | rupees }}</strong></td>
+        <td><strong>{{ totals.igst_paise | rupees }}</strong></td>
+        <td><strong>{{ totals.total_paise | rupees }}</strong></td>
+    </tr>
+    {% endif %}
+</table>
+</div>
+{% endblock %}

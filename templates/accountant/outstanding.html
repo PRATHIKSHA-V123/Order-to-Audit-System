@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Outstanding (Receivables with Ageing)</h2>
+<p><a href="{{ url_for('reports.outstanding_csv') }}">Download CSV (opens in Excel)</a></p>
+
+<div class="scroll">
+<table>
+    <tr><th>Customer</th><th>Invoice</th><th>Date</th><th>Total</th><th>Paid</th><th>Outstanding</th>
+        <th>Age (days)</th><th>0-30</th><th>31-60</th><th>Over 60</th></tr>
+    {% for r in rows %}
+    <tr>
+        <td>{{ r.customer }}</td><td>{{ r.invoice_no }}</td><td>{{ r.invoice_date }}</td>
+        <td>{{ r.total | rupees }}</td><td>{{ r.paid | rupees }}</td>
+        <td><strong>{{ r.due | rupees }}</strong></td><td>{{ r.age }}</td>
+        <td>{{ r.b1 | rupees }}</td><td>{{ r.b2 | rupees }}</td><td>{{ r.b3 | rupees }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="10">Nothing outstanding</td></tr>
+    {% endfor %}
+    {% if rows %}
+    <tr>
+        <td colspan="3"><strong>Total</strong></td>
+        <td><strong>{{ totals.total | rupees }}</strong></td>
+        <td><strong>{{ totals.paid | rupees }}</strong></td>
+        <td><strong>{{ totals.due | rupees }}</strong></td><td></td>
+        <td><strong>{{ totals.b1 | rupees }}</strong></td>
+        <td><strong>{{ totals.b2 | rupees }}</strong></td>
+        <td><strong>{{ totals.b3 | rupees }}</strong></td>
+    </tr>
+    {% endif %}
+</table>
+</div>
+{% endblock %}
