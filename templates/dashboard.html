@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+{% set icons = {
+    'New Order': '🛒', 'My Orders': '📋', 'Orders': '📦', 'Sales Register': '🧾',
+    'Outstanding': '💰', 'Outstanding Dues': '💰', 'Stock': '🏭', 'Stock Ledger': '📒',
+    'Audit Log': '🔍', 'Masters': '⚙️', 'Purchases': '🚚', 'Production Run': '🍘',
+    'GST Summary': '🏛️', 'Stock Report (CSV)': '📥', 'Stock Levels': '📊',
+    "Today's Orders": '📅', 'Variance Alerts': '⚠️', 'Cost per Packet': '🧮'
+} %}
+{% set art = {
+    'salesman': '🛒🍘🥨', 'admin': '🧾📦✅', 'production': '🏭🍘🥜',
+    'accountant': '📊🧾💰', 'owner': '📈🏆🍘'
+} %}
+
+<div class="hero hero-{{ session['role'] }}">
+    <div>
+        <h2>Welcome, {{ session['full_name'] }} 👋</h2>
+        <p>Signed in as <span class="role-pill">{{ session['role'] }}</span></p>
+    </div>
+    <div class="hero-art">{{ art.get(session['role'], '🍘') }}</div>
+</div>
+
+<div class="grid">
+    {% for title, desc, endpoint in menu %}
+        {% if endpoint %}
+        <a class="card dash cardlink" href="{{ url_for(endpoint) }}">
+            <div class="icon">{{ icons.get(title, '📌') }}</div>
+            <h3>{{ title }}</h3>
+            <p>{{ desc }}</p>
+            <span class="tag live">Open &rarr;</span>
+        </a>
+        {% else %}
+        <div class="card dash">
+            <div class="icon">{{ icons.get(title, '📌') }}</div>
+            <h3>{{ title }}</h3>
+            <p>{{ desc }}</p>
+            <span class="tag">Coming soon</span>
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}

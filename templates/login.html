@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="login-split">
+    <div class="login-art">
+        <div class="snack-cluster">
+            <span class="s1">🍘</span>
+            <span class="s2">🥨</span>
+            <span class="s3">🍿</span>
+            <span class="s4">🥜</span>
+            <span class="s5">🍪</span>
+        </div>
+        <h2>Fresh from our factory</h2>
+        <p>Murukku, mixture, chips and sweets</p>
+    </div>
+
+    <div class="login-form-side">
+        <h2>Sign in</h2>
+        <form method="post">
+            <label>Username</label>
+            <input type="text" name="username" required autofocus>
+            <label>Password</label>
+            <div class="pw-wrap">
+                <input type="password" name="password" id="pw" required>
+                <button type="button" class="toggle-pw"
+                        onclick="var p=document.getElementById('pw'); var s=(p.type==='password'); p.type=s?'text':'password'; this.textContent=s?'Hide':'Show';">Show</button>
+            </div>
+            <button type="submit">Sign in</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
