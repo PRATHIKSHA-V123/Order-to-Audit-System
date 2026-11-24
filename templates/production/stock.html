@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Stock Summary</h2>
+<p><a href="{{ url_for('production.ledger') }}">View full stock ledger</a></p>
+{% for title, group in groups %}
+<h3>{{ title }}</h3>
+<div class="scroll">
+<table>
+    <tr><th>Item</th><th>Balance</th><th></th></tr>
+    {% for r in group %}
+    <tr>
+        <td>{{ r.name }}</td>
+        <td>{{ qty_fmt(r.unit, r.bal) }}</td>
+        <td><a href="{{ url_for('production.ledger', item_id=r.id) }}">Ledger</a></td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endfor %}
+{% endblock %}

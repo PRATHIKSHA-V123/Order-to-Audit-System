@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Production Run - {{ product.name }}</h2>
+<p>One standard batch makes <strong>{{ planned }}</strong> packets. Enter quantities in kg, L or pieces.
+   "Damaged" is part of "Used". Standard shown is for 1 batch; for more batches, enter the totals.</p>
+<form method="post">
+    <input type="hidden" name="product_id" value="{{ product.id }}">
+    <label>Number of batches</label>
+    <input type="number" name="batches" min="1" value="1" required>
+
+    {% for r in rows %}
+    <label>{{ r.name }} used ({{ r.unit_name }}) - standard per batch: {{ r.standard }}</label>
+    <input type="number" name="used_{{ r.item_id }}" step="any" min="0" value="{{ r.standard }}" required>
+    <label>{{ r.name }} damaged ({{ r.unit_name }})</label>
+    <input type="number" name="bad_{{ r.item_id }}" step="any" min="0" placeholder="0">
+    {% endfor %}
+
+    <label>Actual good packets produced</label>
+    <input type="number" name="actual_output" min="0" required>
+    <label>Labour cost (Rs)</label>
+    <input type="number" name="labour" step="0.01" min="0" placeholder="0">
+    <label>Gas / power / other cost (Rs)</label>
+    <input type="number" name="overhead" step="0.01" min="0" placeholder="0">
+    <button type="submit">Save production run</button>
+</form>
+
+<h3 style="margin-top:28px">Recent runs</h3>
+<div class="scroll">
+<table>
+    <tr><th>#</th><th>Date</th><th>Expected</th><th>Actual</th><th></th></tr>
+    {% for r in recent %}
+    <tr>
+        <td>{{ r.id }}</td><td>{{ r.run_date }}</td>
+        <td>{{ r.planned_output }}</td><td>{{ r.actual_output }}</td>
+        <td><a href="{{ url_for('production.run_detail', run_id=r.id) }}">View report</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">No runs yet</td></tr>
+    {% endfor %}
+</table>
+</div>
+{% endblock %}

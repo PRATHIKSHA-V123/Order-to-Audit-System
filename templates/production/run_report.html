@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="{{ url_for('production.stock') }}">&larr; Stock</a></p>
+<h2>Run #{{ run.id }} - {{ run.product }}</h2>
+<p>Date: {{ run.run_date }} &nbsp;|&nbsp; Variance is flagged beyond 3%</p>
+
+<h3>Yield</h3>
+<div class="scroll">
+<table>
+    <tr><th>Expected packets</th><th>Actual good packets</th><th>Variance</th></tr>
+    <tr>
+        <td>{{ report.planned_output }}</td>
+        <td>{{ report.actual_output }}</td>
+        <td>{% if report.yield_flag %}<span class="flag">{{ report.yield_pct }}% FLAG</span>
+            {% else %}{{ report.yield_pct }}%{% endif %}</td>
+    </tr>
+</table>
+</div>
+
+<h3>Planned vs actual consumption</h3>
+<div class="scroll">
+<table>
+    <tr><th>Material</th><th>Planned</th><th>Actual</th><th>Variance</th></tr>
+    {% for l in report.lines %}
+    <tr>
+        <td>{{ l.name }}</td>
+        <td>{{ qty_fmt(l.unit, l.planned) }}</td>
+        <td>{{ qty_fmt(l.unit, l.actual) }}</td>
+        <td>{% if l.flag %}<span class="flag">{{ l.pct }}% FLAG</span>{% else %}{{ l.pct }}%{% endif %}</td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+
+<h3>Cost</h3>
+<div class="scroll">
+<table>
+    <tr><th>Materials</th><th>Labour</th><th>Gas / power</th><th>Total</th><th>Good packets</th></tr>
+    <tr>
+        <td>{{ cost.material | rupees }}</td>
+        <td>{{ cost.labour | rupees }}</td>
+        <td>{{ cost.overhead | rupees }}</td>
+        <td>{{ cost.total | rupees }}</td>
+        <td>{{ cost.good_packets }}</td>
+    </tr>
+</table>
+</div>
+<p>Cost per packet: <strong>{{ cost.per_packet | rupees }}</strong> &nbsp;|&nbsp;
+   Selling price: {{ cost.selling | rupees }} &nbsp;|&nbsp;
+   Margin: <strong>{{ cost.margin | rupees }} ({{ cost.margin_pct }}%)</strong></p>
+{% endblock %}

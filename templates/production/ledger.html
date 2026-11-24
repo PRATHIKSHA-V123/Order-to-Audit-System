@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Stock Ledger</h2>
+<form method="get" class="plain">
+    <label>Item</label>
+    <select name="item_id" style="max-width:320px">
+        <option value="">All items</option>
+        {% for i in items %}
+        <option value="{{ i.id }}" {% if i.id == item_id %}selected{% endif %}>{{ i.name }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Show</button>
+</form>
+
+<div class="scroll">
+<table>
+    <tr>
+        <th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>Source</th><th>Note</th>
+        {% if item_id %}<th>Balance</th>{% endif %}
+    </tr>
+    {% for e in entries %}
+    <tr>
+        <td>{{ e.txn_date }}</td>
+        <td>{{ e.name }}</td>
+        <td>{{ e.txn_type }}</td>
+        <td>{{ qty_fmt(e.unit, e.qty_change) }}</td>
+        <td>{% if e.ref_table %}{{ e.ref_table }} #{{ e.ref_id }}{% else %}-{% endif %}</td>
+        <td>{{ e.note or '' }}</td>
+        {% if item_id %}<td><strong>{{ qty_fmt(e.unit, e.balance) }}</strong></td>{% endif %}
+    </tr>
+    {% else %}
+    <tr><td colspan="7">No movements</td></tr>
+    {% endfor %}
+</table>
+</div>
+{% endblock %}

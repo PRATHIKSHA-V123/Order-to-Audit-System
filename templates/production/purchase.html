@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Record Purchase</h2>
+<form method="post">
+    <label>Item</label>
+    <select name="item_id" required>
+        <option value="">-- choose item --</option>
+        {% for i in items %}
+        <option value="{{ i.id }}">{{ i.name }} (enter in {{ unit_names[i.unit] }})</option>
+        {% endfor %}
+    </select>
+    <label>Quantity (kg, L or pieces, as shown above)</label>
+    <input type="number" name="qty" step="any" min="0" required>
+    <label>Rate per kg / L / piece (Rs)</label>
+    <input type="number" name="rate" step="any" min="0" required>
+    <label>Supplier (optional)</label>
+    <input type="text" name="supplier">
+    <button type="submit">Save purchase</button>
+</form>
+
+<h3 style="margin-top:28px">Recent purchases</h3>
+<div class="scroll">
+<table>
+    <tr><th>Date</th><th>Item</th><th>Quantity</th><th>Total paid</th><th>Supplier</th></tr>
+    {% for p in recent %}
+    <tr>
+        <td>{{ p.purchase_date }}</td>
+        <td>{{ p.name }}</td>
+        <td>{{ qty_fmt(p.unit, p.qty) }}</td>
+        <td>{{ p.total_paise | rupees }}</td>
+        <td>{{ p.supplier or '-' }}</td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endblock %}
