@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Business Summary</h2>
+<p>As of {{ today }}</p>
+
+<div class="grid">
+    <div class="card stat">
+        <div class="lbl">Today's orders</div>
+        <div class="num">{{ orders_today }}</div>
+        <div class="sub">Value before tax: {{ today_value | rupees }}</div>
+    </div>
+    <div class="card stat">
+        <div class="lbl">Waiting for approval</div>
+        <div class="num">{{ pending }}</div>
+        <div class="sub">Orders in submitted status</div>
+    </div>
+    <div class="card stat">
+        <div class="lbl">Sales invoiced</div>
+        <div class="num">{{ sales_total | rupees }}</div>
+        <div class="sub">{{ sales_count }} invoice(s), cancelled ones excluded</div>
+    </div>
+    <div class="card stat">
+        <div class="lbl">Outstanding dues</div>
+        <div class="num">{{ outstanding_total | rupees }}</div>
+        <div class="sub"><a href="{{ url_for('reports.outstanding') }}">View ageing report</a></div>
+    </div>
+</div>
+
+<h3>Orders by status</h3>
+<div class="scroll">
+<table>
+    <tr><th>Status</th><th>Orders</th></tr>
+    {% for s in status_counts %}
+    <tr><td><span class="badge">{{ s.status }}</span></td><td>{{ s.c }}</td></tr>
+    {% else %}
+    <tr><td colspan="2">No orders yet</td></tr>
+    {% endfor %}
+</table>
+</div>
+
+<h3>Variance alerts (latest production run)</h3>
+{% if latest %}
+    {% if alerts %}
+    <div class="scroll">
+    <table>
+        <tr><th>What</th><th>Variance</th></tr>
+        {% for a in alerts %}
+        <tr><td>{{ a.what }}</td><td><span class="flag">{{ a.pct }}% FLAG</span></td></tr>
+        {% endfor %}
+    </table>
+    </div>
+    {% else %}
+    <p class="ok">Everything is within the 3% tolerance.</p>
+    {% endif %}
+    <p><a href="{{ url_for('production.run_detail', run_id=latest.id) }}">Open the full report for run #{{ latest.id }} ({{ latest.run_date }})</a></p>
+{% else %}
+    <p>No production runs yet.</p>
+{% endif %}
+
+<h3>Cost per packet (latest production run)</h3>
+{% if cost %}
+<div class="grid">
+    <div class="card stat">
+        <div class="lbl">Cost per packet</div>
+        <div class="num">{{ cost.per_packet | rupees }}</div>
+        <div class="sub">Total {{ cost.total | rupees }} for {{ cost.good_packets }} good packets</div>
+    </div>
+    <div class="card stat">
+        <div class="lbl">Selling price</div>
+        <div class="num">{{ cost.selling | rupees }}</div>
+        <div class="sub">Before GST</div>
+    </div>
+    <div class="card stat">
+        <div class="lbl">Margin per packet</div>
+        <div class="num">{{ cost.margin | rupees }}</div>
+        <div class="sub">{{ cost.margin_pct }}% of selling price</div>
+    </div>
+</div>
+{% else %}
+<p>No production runs yet.</p>
+{% endif %}
+
+{% for title, group in groups %}
+<h3>Stock levels: {{ title }}</h3>
+<div class="scroll">
+<table>
+    <tr><th>Item</th><th>Balance</th></tr>
+    {% for r in group %}
+    <tr><td>{{ r.name }}</td><td>{{ qty_fmt(r.unit, r.bal) }}</td></tr>
+    {% endfor %}
+</table>
+</div>
+{% endfor %}
+{% endblock %}
