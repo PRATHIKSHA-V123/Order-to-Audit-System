@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Masters</h2>
+<p>Prices are in rupees. Material quantities are typed in kg, L or pieces.</p>
+
+<h3>Products and materials</h3>
+<div class="scroll">
+<table>
+    <tr><th>Item</th><th>Type</th><th>Unit</th><th>Selling price (Rs)</th><th>GST %</th><th>HSN</th><th></th></tr>
+    {% for i in items %}
+    <tr>
+        <td>{{ i.name }}</td>
+        <td>{{ i.item_type }}</td>
+        <td>{{ unit_names[i.unit] }}</td>
+        {% if i.item_type == 'finished' %}
+        <td><input form="item{{ i.id }}" type="number" name="price" step="0.01" min="0"
+                   value="{{ '%.2f' % (i.price_paise / 100) }}" style="width:110px"></td>
+        <td><input form="item{{ i.id }}" type="number" name="gst" min="0" max="40"
+                   value="{{ i.gst_percent }}" style="width:70px"></td>
+        <td><input form="item{{ i.id }}" type="text" name="hsn" value="{{ i.hsn_code or '' }}" style="width:90px"></td>
+        <td>
+            <form id="item{{ i.id }}" method="post" class="plain"
+                  action="{{ url_for('masters.update_item', item_id=i.id) }}"></form>
+            <button form="item{{ i.id }}" type="submit" style="margin-top:0">Save</button>
+        </td>
+        {% else %}
+        <td>-</td><td>-</td><td>-</td><td></td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+</div>
+
+<h3 style="margin-top:28px">Add an item</h3>
+<form method="post" action="{{ url_for('masters.add_item') }}">
+    <label>Name</label>
+    <input type="text" name="name" required>
+    <label>Type</label>
+    <select name="item_type">
+        <option value="raw">Raw material</option>
+        <option value="packing">Packing material</option>
+        <option value="finished">Finished product</option>
+    </select>
+    <label>Unit (g items are shown in kg, ml items in L)</label>
+    <select name="unit">
+        <option value="g">kg (stored as g)</option>
+        <option value="ml">L (stored as ml)</option>
+        <option value="pc">pieces</option>
+    </select>
+    <label>Selling price (Rs, finished products only)</label>
+    <input type="number" name="price" step="0.01" min="0" placeholder="0">
+    <label>GST % (finished products only)</label>
+    <input type="number" name="gst" min="0" max="40" placeholder="5">
+    <label>HSN code (finished products only)</label>
+    <input type="text" name="hsn" placeholder="2106">
+    <button type="submit">Add item</button>
+</form>
+
+<h3 style="margin-top:28px">Customers</h3>
+<div class="scroll">
+<table>
+    <tr><th>Name</th><th>GSTIN</th><th>State</th><th>Phone</th></tr>
+    {% for c in customers %}
+    <tr><td>{{ c.name }}</td><td>{{ c.gstin or '-' }}</td><td>{{ c.state }}</td><td>{{ c.phone or '-' }}</td></tr>
+    {% endfor %}
+</table>
+</div>
+
+<h3 style="margin-top:20px">Add a customer</h3>
+<form method="post" action="{{ url_for('masters.add_customer') }}">
+    <label>Name</label>
+    <input type="text" name="name" required>
+    <label>GSTIN (optional)</label>
+    <input type="text" name="gstin">
+    <label>State (decides CGST + SGST or IGST)</label>
+    <select name="state">
+        {% for s in states %}<option>{{ s }}</option>{% endfor %}
+    </select>
+    <label>Phone</label>
+    <input type="text" name="phone">
+    <label>Address</label>
+    <input type="text" name="address">
+    <button type="submit">Add customer</button>
+</form>
+
+<h3 style="margin-top:28px">Bill of Materials (recipes)</h3>
+{% for b in boms %}
+<div class="card" style="margin-bottom:16px">
+    <h3>{{ b.header.name }}</h3>
+    <form method="post" action="{{ url_for('masters.set_output', bom_id=b.header.id) }}" class="plain">
+        <label>Packets made by one batch</label>
+        <input type="number" name="planned_output" min="1" value="{{ b.header.planned_output }}" style="max-width:160px">
+        <button type="submit" style="margin-top:6px">Save yield</button>
+    </form>
+    <div class="scroll">
+    <table>
+        <tr><th>Material</th><th>Quantity per batch</th></tr>
+        {% for l in b.lines %}
+        <tr><td>{{ l.name }}</td><td>{{ qty_fmt(l.unit, l.qty_per_batch) }}</td></tr>
+        {% else %}
+        <tr><td colspan="2">No materials yet</td></tr>
+        {% endfor %}
+    </table>
+    </div>
+    <form method="post" action="{{ url_for('masters.set_line', bom_id=b.header.id) }}" class="plain">
+        <label>Add or change a material (quantity 0 removes it)</label>
+        <select name="item_id" style="max-width:300px">
+            {% for m in materials %}<option value="{{ m.id }}">{{ m.name }} ({{ unit_names[m.unit] }})</option>{% endfor %}
+        </select>
+        <input type="number" name="qty" step="any" min="0" placeholder="Quantity per batch" style="max-width:300px;margin-top:6px">
+        <button type="submit" style="margin-top:6px">Save material</button>
+    </form>
+</div>
+{% endfor %}
+
+{% if no_bom %}
+<h3>Create a BOM for a product</h3>
+<form method="post" action="{{ url_for('masters.create_bom') }}">
+    <label>Product</label>
+    <select name="product_id">
+        {% for p in no_bom %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+    </select>
+    <label>Packets made by one batch</label>
+    <input type="number" name="planned_output" min="1" required>
+    <label>Copy the materials from (optional)</label>
+    <select name="copy_from">
+        <option value="">-- start empty --</option>
+        {% for b in boms %}<option value="{{ b.header.product_id }}">{{ b.header.name }}</option>{% endfor %}
+    </select>
+    <button type="submit">Create BOM</button>
+</form>
+{% endif %}
+{% endblock %}
