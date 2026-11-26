@@ -33,12 +33,13 @@ def role_required(*roles):
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form["username"].strip()
+        username = request.form["username"].strip().lower()
         password = request.form["password"]
+        remember = request.form.get("remember") == "1"
 
         conn = get_connection()
         user = conn.execute(
-            "SELECT * FROM users WHERE username = ? AND active = 1", (username,)
+            "SELECT * FROM users WHERE lower(username) = ? AND active = 1", (username,)
         ).fetchone()
         conn.close()
 
@@ -47,13 +48,11 @@ def login():
             session["user_id"] = user["id"]
             session["full_name"] = user["full_name"]
             session["role"] = user["role"]
+            session.permanent = remember      # ticked: stay signed in for 31 days
             return redirect(url_for("dashboard"))
 
-        flash("Wrong username or password", "error")
+        flash("Wrong email ID or password", "error")
     return render_template("login.html")
-
-
-@auth_bp.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("auth.login"))

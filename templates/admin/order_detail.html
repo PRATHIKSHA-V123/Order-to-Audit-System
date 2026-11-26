@@ -68,6 +68,13 @@
 </div>
 <p><a href="{{ url_for('reports.invoice_pdf', invoice_id=invoice.id) }}" target="_blank">Open invoice PDF</a></p>
 
+{% set pdf_link = url_for('reports.invoice_pdf', invoice_id=invoice.id, _external=True) %}
+{% set share_text = 'Hello ' ~ order.customer ~ ', your invoice ' ~ invoice.invoice_no ~ ' for ' ~ (invoice.total_paise | rupees) ~ ' is ready. Invoice PDF: ' ~ pdf_link %}
+<div class="actions">
+    <a class="sharebtn wa" href="https://wa.me/?text={{ share_text | urlencode }}" target="_blank" rel="noopener">Share on WhatsApp</a>
+    <a class="sharebtn mail" href="mailto:?subject={{ ('Invoice ' ~ invoice.invoice_no) | urlencode }}&body={{ share_text | urlencode }}">Share by email</a>
+</div>
+
 {% if credit_note %}
 <p class="flag">Cancelled by credit note {{ credit_note.credit_no }} on {{ credit_note.note_date }}
    for {{ credit_note.total_paise | rupees }}. Reason: {{ credit_note.reason }}</p>

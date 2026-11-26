@@ -299,3 +299,7 @@ label.remember input { width: auto; margin: 0; }
     .top-right { justify-self: center; }
     .brand-center { padding-right: 18px; }
 }
+.sharebtn { display: inline-block; padding: 10px 20px; border-radius: 10px; color: #fff; font-weight: 600; text-decoration: none; }
+.sharebtn:hover { text-decoration: none; opacity: 0.9; }
+.sharebtn.wa { background: #16a34a; }
+.sharebtn.mail { background: #4f46e5; }
