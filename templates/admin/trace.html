@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Order-to-Audit Trace{% endblock %}
+{% block content %}
+<h2>Order-to-Audit Trace</h2>
+<p>Type an invoice number, a credit note number or an order number to see everything that happened to it, from the order to the audit.</p>
+
+<form method="get" action="{{ url_for('admin.trace') }}">
+    <label>Invoice, credit note or order number</label>
+    <input type="text" name="q" value="{{ q }}" placeholder="e.g. 3, or an invoice number" required>
+    <button type="submit">Trace</button>
+</form>
+
+{% if searched and not data %}
+<div class="msg error" style="margin-top:16px">Nothing found. Check the number and try again.</div>
+{% endif %}
+
+{% if data %}
+{% set o = data.order %}
+{% set inv = data.invoice %}
+<h3>Order #{{ o.id }} - {{ o.customer }}</h3>
+<div class="grid">
+    <div class="card stat"><div class="lbl">Status</div>
+        <div class="num" style="font-size:1.3rem"><span class="badge">{{ o.status }}</span></div>
+        <div class="sub">Placed on {{ o.order_date }}</div></div>
+    <div class="card stat"><div class="lbl">Order value</div>
+        <div class="num">{{ data.value_paise | rupees }}</div><div class="sub">Before tax</div></div>
+    <div class="card stat"><div class="lbl">Invoice</div>
+        <div class="num" style="font-size:1.2rem">{{ inv.invoice_no if inv else 'Not yet' }}</div>
+        <div class="sub">{% if inv %}Total {{ inv.total_paise | rupees }}{% else %}Not created{% endif %}</div></div>
+    <div class="card stat"><div class="lbl">Paid</div>
+        <div class="num">{{ data.paid_paise | rupees }}</div>
+        <div class="sub">{% if data.credit_note %}Invoice cancelled{% elif inv %}Outstanding {{ data.outstanding_paise | rupees }}{% else %}-{% endif %}</div></div>
+</div>
+
+<div class="actions">
+    {% if session['role'] == 'admin' %}<a href="{{ url_for('admin.order_detail', order_id=o.id) }}">Open order page</a>{% endif %}
+    {% if inv and session['role'] in ('admin', 'accountant') %}
+    <a href="{{ url_for('reports.invoice_pdf', invoice_id=inv.id) }}" target="_blank">Open invoice PDF</a>{% endif %}
+</div>
+
+<h3>Timeline</h3>
+<ul class="timeline">
+    {% for e in data.events %}
+    <li class="k-{{ e.kind }}">
+        <div class="tl-time">{{ e.when[:10] if e.when.endswith('00:00:00') else e.when[:16] }} &nbsp;|&nbsp; {{ e.who }}</div>
+        <div class="tl-title">{{ e.title }}</div>
+        <div class="tl-text">{{ e.text }}</div>
+    </li>
+    {% endfor %}
+</ul>
+
+<h3>Products on this order</h3>
+<div class="scroll">
+<table>
+    <tr><th>Product</th><th>Ordered</th><th>Rate</th><th>Dispatched</th></tr>
+    {% for l in data.lines %}
+    <tr><td>{{ l.name }}</td><td>{{ l.qty_ordered }}</td><td>{{ l.rate_paise | rupees }}</td><td>{{ l.qty_dispatched }}</td></tr>
+    {% endfor %}
+</table>
+</div>
+
+<h3>Stock ledger rows linked to this order</h3>
+<div class="scroll">
+<table>
+    <tr><th>Date</th><th>Item</th><th>Change</th><th>Type</th><th>Note</th></tr>
+    {% for l in data.ledger %}
+    <tr><td>{{ l.txn_date }}</td><td>{{ l.name }}</td><td>{{ qty_fmt(l.unit, l.qty_change) }}</td>
+        <td>{{ l.txn_type }}</td><td>{{ l.note or '-' }}</td></tr>
+    {% else %}
+    <tr><td colspan="5">No stock movement yet. Stock moves only when the order is dispatched.</td></tr>
+    {% endfor %}
+</table>
+</div>
+{% endif %}
+
+<h3>Recent orders</h3>
+<div class="scroll">
+<table>
+    <tr><th>Order</th><th>Customer</th><th>Status</th><th>Invoice</th><th></th></tr>
+    {% for r in recent %}
+    <tr><td>#{{ r.id }}</td><td>{{ r.customer }}</td><td><span class="badge">{{ r.status }}</span></td>
+        <td>{{ r.invoice_no or '-' }}</td>
+        <td><a href="{{ url_for('admin.trace', order_id=r.id) }}">Trace</a></td></tr>
+    {% else %}
+    <tr><td colspan="5">No orders yet</td></tr>
+    {% endfor %}
+</table>
+</div>
+{% endblock %}

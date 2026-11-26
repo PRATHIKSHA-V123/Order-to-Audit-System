@@ -5,6 +5,7 @@ from routes.auth import role_required
 from services.stock import balance
 from services import orders as svc
 from services.audit import log
+from services.trace import build_trace, find_order_id
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -198,3 +199,20 @@ def audit():
     ).fetchall()
     conn.close()
     return render_template("admin/audit.html", rows=rows)
+@admin_bp.route("/trace")
+@role_required("admin", "accountant", "owner")
+def trace():
+    q = request.args.get("q", "").strip()
+    order_id = request.args.get("order_id", type=int)
+    conn = get_connection()
+    if order_id is None and q:
+        order_id = find_order_id(conn, q)
+    data = build_trace(conn, order_id) if order_id else None
+    recent = conn.execute(
+        "SELECT o.id, o.status, c.name AS customer, "
+        "(SELECT invoice_no FROM invoices i WHERE i.order_id = o.id) AS invoice_no "
+        "FROM orders o JOIN customers c ON c.id = o.customer_id ORDER BY o.id DESC LIMIT 10"
+    ).fetchall()
+    conn.close()
+    searched = bool(q) or request.args.get("order_id") is not None
+    return render_template("admin/trace.html", q=q, data=data, recent=recent, searched=searched)

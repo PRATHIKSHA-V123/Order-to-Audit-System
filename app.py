@@ -49,8 +49,9 @@ MENUS = {
         ("Stock", "Raw, packing and finished goods", "production.stock"),
         ("Stock Ledger", "Every stock movement", "production.ledger"),
         ("Audit Log", "Who changed what, and when", "admin.audit"),
+        ("Order Trace", "Follow one order from start to audit", "admin.trace"),
         ("Masters", "Products, customers, prices, recipes", "masters.index"),
-                ("Business Summary", "Orders, stock, variance, cost and dues at a glance", "owner.summary"),
+        ("Business Summary", "Orders, stock, variance, cost and dues at a glance", "owner.summary"),
     ],
     "production": [
         ("Purchases", "Record raw material receipts", "production.purchase"),
@@ -67,6 +68,7 @@ MENUS = {
         ("Stock Ledger", "Every stock movement", "production.ledger"),
         ("Stock Report (CSV)", "Download for Excel", "reports.stock_csv"),
         ("Audit Log", "Who changed what, and when", "admin.audit"),
+        ("Order Trace", "Follow one order from start to audit", "admin.trace"),
     ],
     "owner": [
         ("Business Summary", "Orders, stock, variance, cost and dues at a glance", "owner.summary"),
@@ -75,6 +77,7 @@ MENUS = {
         ("Outstanding Dues", "Money to collect", "reports.outstanding"),
         ("Sales Register", "Sales and GST", "reports.sales"),
         ("Audit Log", "Who changed what, and when", "admin.audit"),
+        ("Order Trace", "Follow one order from start to audit", "admin.trace"),
     ],
 }
 
