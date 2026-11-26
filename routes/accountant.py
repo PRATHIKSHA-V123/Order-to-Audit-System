@@ -1,12 +1,15 @@
 import csv
 import io
 from datetime import date
-from decimal import Decimal
-from flask import Blueprint, render_template, request, Response
+from decimal import Decimal, ROUND_HALF_UP
+from flask import Blueprint, render_template, request, Response, abort
 from database.db import get_connection
 from routes.auth import role_required
 from services.stock import all_balances
 from services.pdf_invoice import build_invoice_pdf
+from services.report_pdf import table_pdf
+from services.production import variance_pct, is_flagged
+from services.costing import run_cost
 
 accountant_bp = Blueprint("reports", __name__, url_prefix="/reports")
 ROLES = ("accountant", "admin", "owner")
@@ -20,6 +23,12 @@ def money(paise):
     return f"{Decimal(paise) / 100:.2f}"
 
 
+def dq(unit, qty):
+    """Base units (g, ml, pc) -> kg, L or pieces, as plain text."""
+    factor = UNIT[unit][1]
+    return format((Decimal(qty) / factor).normalize(), "f")
+
+
 def date_filter(column, d_from, d_to):
     sql, params = "", []
     if d_from:
@@ -31,6 +40,16 @@ def date_filter(column, d_from, d_to):
     return sql, params
 
 
+def period_text(d_from, d_to):
+    if d_from and d_to:
+        return f"Period: {d_from} to {d_to}"
+    if d_from:
+        return f"Period: from {d_from}"
+    if d_to:
+        return f"Period: up to {d_to}"
+    return "Period: all dates"
+
+
 def csv_response(filename, header, rows):
     buf = io.StringIO()
     writer = csv.writer(buf)
@@ -40,6 +59,7 @@ def csv_response(filename, header, rows):
                     headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
+# ---------------------------------------------------------------- queries
 def sales_rows(conn, d_from, d_to):
     where, params = date_filter("inv.invoice_date", d_from, d_to)
     return conn.execute(
@@ -81,6 +101,207 @@ def outstanding_rows(conn):
             "b3": due if age > 60 else 0,
         })
     return result
+
+
+# ---------------------------------------------------------------- report builders
+# Each builder returns one table: title, headers, rows, PDF column weights, file name.
+def build_sales(conn, d_from, d_to):
+    rows = sales_rows(conn, d_from, d_to)
+    data = [[r["invoice_no"], r["invoice_date"], r["customer"], r["gstin"] or "", r["state"],
+             money(r["taxable_paise"]), money(r["cgst_paise"]), money(r["sgst_paise"]),
+             money(r["igst_paise"]), money(r["total_paise"])] for r in rows]
+    if rows:
+        keys = ("taxable_paise", "cgst_paise", "sgst_paise", "igst_paise", "total_paise")
+        data.append(["TOTAL", "", "", "", ""] + [money(sum(r[k] for r in rows)) for k in keys])
+    return {"title": "Sales Register", "file": "sales_register",
+            "headers": ["Invoice", "Date", "Customer", "GSTIN", "Place of supply",
+                        "Taxable", "CGST", "SGST", "IGST", "Total"],
+            "rows": data, "weights": [2.2, 1.3, 2, 2.5, 1.9, 1.4, 1.2, 1.2, 1.2, 1.5]}
+
+
+def build_gst(conn, d_from, d_to):
+    rows = gst_rows(conn, d_from, d_to)
+    data = [[r["state"], r["invoices"], money(r["taxable_paise"]), money(r["cgst_paise"]),
+             money(r["sgst_paise"]), money(r["igst_paise"]), money(r["total_paise"])]
+            for r in rows]
+    if rows:
+        keys = ("taxable_paise", "cgst_paise", "sgst_paise", "igst_paise", "total_paise")
+        data.append(["TOTAL", sum(r["invoices"] for r in rows)]
+                    + [money(sum(r[k] for r in rows)) for k in keys])
+    return {"title": "GST Summary of Outward Supplies", "file": "gst_summary",
+            "headers": ["Place of supply", "Invoices", "Taxable", "CGST", "SGST", "IGST",
+                        "Invoice value"],
+            "rows": data, "weights": [2.5, 1, 1.6, 1.3, 1.3, 1.3, 1.6]}
+
+
+def build_purchases(conn, d_from, d_to):
+    where, params = date_filter("p.purchase_date", d_from, d_to)
+    rows = conn.execute(
+        "SELECT p.purchase_date, p.qty, p.total_paise, p.supplier, i.name, i.unit "
+        "FROM purchases p JOIN items i ON i.id = p.item_id "
+        "WHERE COALESCE(p.supplier, '') != 'OPENING STOCK'" + where + " ORDER BY p.id",
+        params).fetchall()
+    data = []
+    for r in rows:
+        units = Decimal(r["qty"]) / UNIT[r["unit"]][1]
+        rate = (Decimal(r["total_paise"]) / 100 / units).quantize(
+            Decimal("0.01"), ROUND_HALF_UP) if units else Decimal("0.00")
+        data.append([r["purchase_date"], r["name"], dq(r["unit"], r["qty"]), UNIT[r["unit"]][0],
+                     str(rate), money(r["total_paise"]), r["supplier"] or ""])
+    if rows:
+        data.append(["TOTAL", "", "", "", "", money(sum(r["total_paise"] for r in rows)), ""])
+    return {"title": "Purchase Register", "file": "purchase_register",
+            "headers": ["Date", "Item", "Quantity", "Unit", "Rate (Rs/unit)", "Total (Rs)",
+                        "Supplier"],
+            "rows": data, "weights": [1.4, 2.4, 1.2, 1, 1.6, 1.4, 2.2]}
+
+
+def build_stock(conn, d_from, d_to):
+    data = [[r["name"], r["item_type"], dq(r["unit"], r["bal"]), UNIT[r["unit"]][0]]
+            for r in all_balances()]
+    return {"title": "Stock Summary (as of today)", "file": "stock_summary",
+            "headers": ["Item", "Type", "Balance", "Unit"],
+            "rows": data, "weights": [3, 1.5, 1.5, 1]}
+
+
+def build_ledger(conn, d_from, d_to):
+    where, params = date_filter("l.txn_date", d_from, d_to)
+    rows = conn.execute(
+        "SELECT l.*, i.name, i.unit FROM stock_ledger l JOIN items i ON i.id = l.item_id "
+        "WHERE 1=1" + where + " ORDER BY l.id", params).fetchall()
+    data = [[r["txn_date"], r["name"], r["txn_type"], dq(r["unit"], r["qty_change"]),
+             UNIT[r["unit"]][0],
+             f"{r['ref_table']} #{r['ref_id']}" if r["ref_table"] else "",
+             r["note"] or ""] for r in rows]
+    return {"title": "Stock Ledger", "file": "stock_ledger",
+            "headers": ["Date", "Item", "Type", "Change", "Unit", "Source", "Note"],
+            "rows": data, "weights": [1.3, 2.2, 2, 1.2, 0.9, 2, 2.4]}
+
+
+def build_production(conn, d_from, d_to):
+    where, params = date_filter("r.run_date", d_from, d_to)
+    runs = conn.execute(
+        "SELECT r.id, r.run_date, r.planned_output, r.actual_output, i.name "
+        "FROM production_runs r JOIN items i ON i.id = r.product_id WHERE 1=1"
+        + where + " ORDER BY r.id", params).fetchall()
+    data = []
+    for r in runs:
+        pct = variance_pct(r["planned_output"], r["actual_output"])
+        try:
+            c = run_cost(conn, r["id"])
+            costs = [money(c["material"]), money(c["labour"]), money(c["overhead"]),
+                     money(c["per_packet"])]
+        except ArithmeticError:
+            costs = ["-", "-", "-", "-"]
+        data.append([f"#{r['id']}", r["run_date"], r["name"], r["planned_output"],
+                     r["actual_output"], str(pct), "FLAG" if is_flagged(pct) else ""] + costs)
+    return {"title": "Production Report (amounts in Rs)", "file": "production_report",
+            "headers": ["Run", "Date", "Product", "Expected", "Actual", "Yield var %", "Flag",
+                        "Materials", "Labour", "Overheads", "Cost/packet"],
+            "rows": data, "weights": [0.8, 1.3, 2, 1.1, 1.1, 1.6, 0.9, 1.5, 1.3, 1.4, 1.7]}
+
+
+def build_variance(conn, d_from, d_to):
+    where, params = date_filter("r.run_date", d_from, d_to)
+    mats = conn.execute(
+        "SELECT i.id, i.name, i.unit, SUM(pl.planned_qty) AS planned, SUM(pl.actual_qty) AS actual "
+        "FROM production_lines pl JOIN production_runs r ON r.id = pl.run_id "
+        "JOIN items i ON i.id = pl.item_id WHERE 1=1" + where + " GROUP BY i.id ORDER BY i.id",
+        params).fetchall()
+    bad = {row["item_id"]: row["bad"] for row in conn.execute(
+        "SELECT l.item_id, SUM(-l.qty_change) AS bad FROM stock_ledger l "
+        "JOIN production_runs r ON r.id = l.ref_id "
+        "WHERE l.txn_type = 'damage' AND l.ref_table = 'production_runs'" + where +
+        " GROUP BY l.item_id", params)}
+    data = []
+    for m in mats:
+        pct = variance_pct(m["planned"], m["actual"])
+        data.append([m["name"], UNIT[m["unit"]][0], dq(m["unit"], m["planned"]),
+                     dq(m["unit"], m["actual"]), str(pct), "FLAG" if is_flagged(pct) else "",
+                     dq(m["unit"], bad.get(m["id"], 0))])
+    return {"title": "Material Variance and Wastage (planned vs actual)", "file": "material_variance",
+            "headers": ["Material", "Unit", "Planned", "Actual", "Variance %", "Flag", "Wastage"],
+            "rows": data, "weights": [2.5, 0.8, 1.4, 1.4, 1.4, 0.9, 1.4]}
+
+
+def build_collections(conn, d_from, d_to):
+    where, params = date_filter("p.pay_date", d_from, d_to)
+    rows = conn.execute(
+        "SELECT p.pay_date, p.amount_paise, p.mode, inv.invoice_no, c.name AS customer "
+        "FROM payments p JOIN invoices inv ON inv.id = p.invoice_id "
+        "JOIN customers c ON c.id = inv.customer_id WHERE 1=1"
+        + NOT_CANCELLED + where + " ORDER BY p.id", params).fetchall()
+    data = [[r["pay_date"], r["invoice_no"], r["customer"], r["mode"] or "",
+             money(r["amount_paise"])] for r in rows]
+    if rows:
+        data.append(["TOTAL", "", "", "", money(sum(r["amount_paise"] for r in rows))])
+    return {"title": "Payments and Collections", "file": "collections",
+            "headers": ["Date", "Invoice", "Customer", "Mode", "Amount (Rs)"],
+            "rows": data, "weights": [1.5, 2.4, 2.4, 1.4, 1.5]}
+
+
+def build_outstanding(conn, d_from, d_to):
+    rows = outstanding_rows(conn)
+    data = [[r["customer"], r["invoice_no"], r["invoice_date"], money(r["total"]),
+             money(r["paid"]), money(r["due"]), r["age"], money(r["b1"]), money(r["b2"]),
+             money(r["b3"])] for r in rows]
+    if rows:
+        keys = ("total", "paid", "due")
+        data.append(["TOTAL", "", ""] + [money(sum(r[k] for r in rows)) for k in keys]
+                    + [""] + [money(sum(r[k] for r in rows)) for k in ("b1", "b2", "b3")])
+    return {"title": "Outstanding Receivables with Ageing (as of today)", "file": "outstanding",
+            "headers": ["Customer", "Invoice", "Date", "Total", "Paid", "Outstanding",
+                        "Age (days)", "0-30 days", "31-60 days", "Over 60 days"],
+            "rows": data, "weights": [1.8, 2.1, 1.4, 1.3, 1.3, 1.5, 1.2, 1.3, 1.3, 1.4]}
+
+
+BUILDERS = {
+    "sales": build_sales, "gst": build_gst, "purchases": build_purchases,
+    "stock": build_stock, "ledger": build_ledger, "production": build_production,
+    "variance": build_variance, "collections": build_collections,
+    "outstanding": build_outstanding,
+}
+
+
+# ---------------------------------------------------------------- pages
+@accountant_bp.route("/hub")
+@role_required(*ROLES)
+def hub():
+    return render_template("accountant/reports_hub.html",
+                           date_from=request.args.get("date_from", ""),
+                           date_to=request.args.get("date_to", ""))
+
+
+@accountant_bp.route("/view/<name>")
+@role_required(*ROLES)
+def view(name):
+    if name not in BUILDERS:
+        abort(404)
+    d_from = request.args.get("date_from", "")
+    d_to = request.args.get("date_to", "")
+    conn = get_connection()
+    report = BUILDERS[name](conn, d_from, d_to)
+    conn.close()
+    return render_template("accountant/report_table.html", report=report, name=name,
+                           date_from=d_from, date_to=d_to, period=period_text(d_from, d_to))
+
+
+@accountant_bp.route("/export/<name>.<fmt>")
+@role_required(*ROLES)
+def export(name, fmt):
+    if name not in BUILDERS or fmt not in ("csv", "pdf"):
+        abort(404)
+    d_from = request.args.get("date_from", "")
+    d_to = request.args.get("date_to", "")
+    conn = get_connection()
+    report = BUILDERS[name](conn, d_from, d_to)
+    conn.close()
+    if fmt == "csv":
+        return csv_response(report["file"] + ".csv", report["headers"], report["rows"])
+    data = table_pdf(report["title"], period_text(d_from, d_to) + "   |   Amounts in Rs",
+                     report["headers"], report["rows"], report["weights"])
+    return Response(data, mimetype="application/pdf",
+                    headers={"Content-Disposition": f"inline; filename={report['file']}.pdf"})
 
 
 @accountant_bp.route("/sales")

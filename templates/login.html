@@ -2,29 +2,38 @@
 {% block content %}
 <div class="login-split">
     <div class="login-art">
-        <div class="snack-cluster">
-            <span class="s1">🍘</span>
-            <span class="s2">🥨</span>
-            <span class="s3">🍿</span>
-            <span class="s4">🥜</span>
-            <span class="s5">🍪</span>
-        </div>
-        <h2>Fresh from our factory</h2>
-        <p>Murukku, mixture, chips and sweets</p>
+        <span class="logo big">🍘</span>
+        <h1 class="art-name">{{ app_name }}</h1>
+        <p class="art-tag">{{ app_tagline }}</p>
+        <ul class="feature-list">
+            <li><span>🛒</span> Orders, invoices and dispatch</li>
+            <li><span>🏭</span> Stock, production and costing</li>
+            <li><span>🧾</span> GST invoices and credit notes</li>
+            <li><span>🔍</span> A complete audit trail</li>
+        </ul>
     </div>
 
     <div class="login-form-side">
-        <h2>Sign in</h2>
+        <h2 class="welcome">Welcome Back!</h2>
+        <p class="sub">Sign in to continue to {{ app_name }}</p>
         <form method="post">
-            <label>Username</label>
-            <input type="text" name="username" required autofocus>
-            <label>Password</label>
+            <label for="username">Email ID</label>
+            <input type="text" name="username" id="username" placeholder="Enter your email ID" required autofocus>
+
+            <label for="pw">Password</label>
             <div class="pw-wrap">
-                <input type="password" name="password" id="pw" required>
+                <input type="password" name="password" id="pw" placeholder="Enter your password" required>
                 <button type="button" class="toggle-pw"
                         onclick="var p=document.getElementById('pw'); var s=(p.type==='password'); p.type=s?'text':'password'; this.textContent=s?'Hide':'Show';">Show</button>
             </div>
-            <button type="submit">Sign in</button>
+
+            <div class="login-options">
+                <label class="remember"><input type="checkbox" name="remember" value="1"> Remember me</label>
+                <a href="#forgot">Forgot password?</a>
+            </div>
+            <p class="forgot-note" id="forgot">Please contact your Admin to reset your password.</p>
+
+            <button type="submit">Sign In</button>
         </form>
     </div>
 </div>

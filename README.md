@@ -1,4 +1,4 @@
-# Order-to-Audit System (Small Food Manufacturer)
+# SnackFlow ERP: Order-to-Audit Management System for Snack Manufacturing
 
 Internship shortlisting task, Centre for Digital Infrastructure, NIT Tiruchirappalli.
 One system from a salesman's order to the auditor's monthly report, for a small South Indian snack factory.
@@ -22,11 +22,11 @@ python -m pytest -v            (16 tests, including the benchmark numbers)
 ## Test logins
 | Role | Username | Password |
 |---|---|---|
-| Salesman | sales | sales123 |
-| Admin | admin | admin123 |
-| Production | prod | prod123 |
-| Accountant | acc | acc123 |
-| Owner | owner | owner123 |
+| Salesman | sales@snackflow.com | sales123 |
+| Admin | admin@snackflow.com | admin123 |
+| Production | prod@snackflow.com | prod123 |
+| Accountant | acc@snackflow.com | acc123 |
+| Owner | owner@snackflow.com | owner123 |
 
 ## What is built (against the section 6 tiers)
 **Must have: all built**

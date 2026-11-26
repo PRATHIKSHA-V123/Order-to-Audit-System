@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Reports Centre</h2>
+<p>Choose a period, then open or export any report. Stock summary and outstanding always show the position as of today.</p>
+
+<form method="get" class="plain">
+    <label>From</label>
+    <input type="date" name="date_from" value="{{ date_from }}" style="max-width:200px">
+    <label>To</label>
+    <input type="date" name="date_to" value="{{ date_to }}" style="max-width:200px">
+    <button type="submit">Apply period</button>
+</form>
+
+{% set reports = [
+    ('Sales register (customer-wise and product-wise on its page)', 'sales', 'reports.sales'),
+    ('GST summary (GSTR-1 / GSTR-3B)', 'gst', 'reports.gst'),
+    ('Purchase register', 'purchases', none),
+    ('Stock summary', 'stock', 'production.stock'),
+    ('Stock ledger', 'ledger', 'production.ledger'),
+    ('Production report (runs and cost per packet)', 'production', none),
+    ('Material variance and wastage', 'variance', none),
+    ('Payments and collections', 'collections', none),
+    ('Outstanding with ageing', 'outstanding', 'reports.outstanding')
+] %}
+
+<h3>Monthly reports</h3>
+<div class="scroll">
+<table>
+    <tr><th>Report</th><th>View</th><th>CSV (Excel)</th><th>PDF</th></tr>
+    {% for title, name, page in reports %}
+    <tr>
+        <td>{{ title }}</td>
+        <td>
+            {% if page %}
+            <a href="{{ url_for(page, date_from=date_from, date_to=date_to) }}">View</a>
+            {% else %}
+            <a href="{{ url_for('reports.view', name=name, date_from=date_from, date_to=date_to) }}">View</a>
+            {% endif %}
+        </td>
+        <td><a href="{{ url_for('reports.export', name=name, fmt='csv', date_from=date_from, date_to=date_to) }}">CSV</a></td>
+        <td><a href="{{ url_for('reports.export', name=name, fmt='pdf', date_from=date_from, date_to=date_to) }}" target="_blank">PDF</a></td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endblock %}

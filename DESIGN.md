@@ -1,4 +1,4 @@
-# Design Note
+# Design Note: SnackFlow ERP (Order-to-Audit Management System)
 
 ## 1. Data model
 ```mermaid

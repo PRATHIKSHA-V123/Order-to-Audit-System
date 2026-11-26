@@ -3,21 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}{{ app_name or 'Snack Manufacturing Factory' }}{% endblock %}</title>
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <header class="topbar">
-    <a class="brand" href="{{ url_for('dashboard') }}">
+    <div class="top-left"></div>
+    <a class="brand brand-center" href="{{ url_for('dashboard') }}">
         <span class="logo">🍘</span>
-        <strong>{{ app_name or 'Snack Manufacturing Factory' }}</strong>
+        <span class="brand-text"><strong>{{ app_name }}</strong><span class="tagline">{{ app_tagline }}</span></span>
     </a>
-    {% if session.get('user_id') %}
-    <div class="user">
-        <span class="chip">{{ session['full_name'] }} <small>{{ session['role'] }}</small></span>
-        <a class="logout" href="{{ url_for('auth.logout') }}">Logout</a>
+    <div class="top-right">
+        {% if session.get('user_id') %}
+        <div class="user">
+            <span class="chip">{{ session['full_name'] }} <small>{{ session['role'] }}</small></span>
+            <a class="logout" href="{{ url_for('auth.logout') }}">Logout</a>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </header>
 
 <main class="container">
@@ -29,6 +32,6 @@
     {% block content %}{% endblock %}
 </main>
 
-<footer class="footer">{{ app_name or 'Snack Manufacturing Factory' }}</footer>
+<footer class="footer">{{ app_name }}</footer>
 </body>
 </html>

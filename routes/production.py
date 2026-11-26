@@ -54,10 +54,11 @@ def purchase():
         "SELECT p.purchase_date, i.name, i.unit, p.qty, p.total_paise, p.supplier "
         "FROM purchases p JOIN items i ON i.id = p.item_id ORDER BY p.id DESC LIMIT 10"
     ).fetchall()
+    suppliers = conn.execute("SELECT name FROM suppliers ORDER BY name").fetchall()
     conn.close()
     unit_names = {k: v[0] for k, v in BIG.items()}
     return render_template("production/purchase.html", items=items, recent=recent,
-                           unit_names=unit_names)
+                           unit_names=unit_names, suppliers=suppliers)
 
 
 @production_bp.route("/run", methods=["GET", "POST"])

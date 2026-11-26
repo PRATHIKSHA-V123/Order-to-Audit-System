@@ -4,11 +4,11 @@ from services.stock import add_movement
 
 # (username, password, full name, role)
 USERS = [
-    ("sales", "sales123", "Sita Salesman", "salesman"),
-    ("admin", "admin123", "Prathiksha V", "admin"),
-    ("prod", "prod123", "Prakash Production", "production"),
-    ("acc", "acc123", "Anita Accountant", "accountant"),
-    ("owner", "owner123", "Om Owner", "owner"),
+    ("sales@snackflow.com", "sales123", "Bhuvana Salesman", "salesman"),
+    ("admin@snackflow.com", "admin123", "Hansika V", "admin"),
+    ("prod@snackflow.com", "prod123", "Vellingiri Production", "production"),
+    ("acc@snackflow.com", "acc123", "Anita Accountant", "accountant"),
+    ("owner@snackflow.com", "owner123", "Prathiksha V", "owner"),
 ]
 
 # (name, type, unit, selling price in paise, gst %, hsn)

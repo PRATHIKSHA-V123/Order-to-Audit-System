@@ -1,8 +1,10 @@
 import sqlite3
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from database.db import get_connection
 from routes.auth import role_required
+from services.audit import log
+from services.stock import add_movement, format_qty
 
 masters_bp = Blueprint("masters", __name__, url_prefix="/masters")
 
@@ -36,6 +38,7 @@ def index():
     conn = get_connection()
     items = conn.execute("SELECT * FROM items ORDER BY item_type DESC, id").fetchall()
     customers = conn.execute("SELECT * FROM customers ORDER BY name").fetchall()
+    suppliers = conn.execute("SELECT * FROM suppliers ORDER BY name").fetchall()
     boms = []
     for h in conn.execute(
         "SELECT h.id, h.product_id, h.planned_output, i.name "
@@ -54,8 +57,8 @@ def index():
     materials = [i for i in items if i["item_type"] in ("raw", "packing")]
     conn.close()
     return render_template("admin/masters.html", items=items, customers=customers,
-                           boms=boms, no_bom=no_bom, materials=materials,
-                           unit_names=UNIT_NAMES, states=STATES)
+                           suppliers=suppliers, boms=boms, no_bom=no_bom,
+                           materials=materials, unit_names=UNIT_NAMES, states=STATES)
 
 
 @masters_bp.route("/item", methods=["POST"])
@@ -98,8 +101,18 @@ def update_item(item_id):
         return back(error="Enter a valid price and GST %")
     hsn = request.form.get("hsn", "").strip() or None
     conn = get_connection()
+    old = conn.execute("SELECT name, price_paise, gst_percent, hsn_code FROM items WHERE id = ?",
+                       (item_id,)).fetchone()
+    if old is None:
+        conn.close()
+        return back(error="Item not found")
     conn.execute("UPDATE items SET price_paise = ?, gst_percent = ?, hsn_code = ? WHERE id = ?",
                  (price, gst, hsn, item_id))
+    if (old["price_paise"], old["gst_percent"], old["hsn_code"]) != (price, gst, hsn):
+        log(conn, "items", item_id, "update",
+            old=f"{old['name']}: Rs {old['price_paise'] / 100:.2f}, GST {old['gst_percent']}%, HSN {old['hsn_code']}",
+            new=f"{old['name']}: Rs {price / 100:.2f}, GST {gst}%, HSN {hsn}",
+            user_id=session["user_id"])
     conn.commit()
     conn.close()
     return back(message="Item updated. New orders use the new price; old orders keep theirs.")
@@ -121,6 +134,57 @@ def add_customer():
     conn.commit()
     conn.close()
     return back(message=f"{name} added")
+
+
+@masters_bp.route("/supplier", methods=["POST"])
+@role_required("admin")
+def add_supplier():
+    name = request.form.get("name", "").strip()
+    if not name:
+        return back(error="Supplier name is needed")
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "INSERT INTO suppliers (name, phone, gstin, address) VALUES (?, ?, ?, ?)",
+            (name, request.form.get("phone", "").strip() or None,
+             request.form.get("gstin", "").strip() or None,
+             request.form.get("address", "").strip() or None))
+        log(conn, "suppliers", cur.lastrowid, "create", new=name, user_id=session["user_id"])
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        return back(error="This supplier already exists")
+    finally:
+        conn.close()
+    return back(message=f"{name} added")
+
+
+@masters_bp.route("/adjust", methods=["POST"])
+@role_required("admin")
+def adjust_stock():
+    reason = request.form.get("reason", "").strip()
+    conn = get_connection()
+    item = conn.execute("SELECT id, name, unit FROM items WHERE id = ?",
+                        (request.form.get("item_id", type=int),)).fetchone()
+    try:
+        qty = to_base(request.form.get("qty", ""), item["unit"]) if item else 0
+    except InvalidOperation:
+        qty = 0
+    if item is None or qty == 0 or not reason:
+        conn.close()
+        return back(error="Choose an item, enter a quantity (not zero) and give a reason")
+    try:
+        ledger_id = add_movement(conn, item["id"], qty, "adjustment", "items", item["id"], reason)
+        log(conn, "stock_ledger", ledger_id, "adjustment",
+            new=f"{item['name']}: {format_qty(item['unit'], qty)}. Reason: {reason}",
+            user_id=session["user_id"])
+        conn.commit()
+    except ValueError:
+        conn.rollback()
+        return back(error="Not enough stock for this reduction")
+    finally:
+        conn.close()
+    return back(message=f"{item['name']} adjusted by {format_qty(item['unit'], qty)}")
 
 
 @masters_bp.route("/bom", methods=["POST"])

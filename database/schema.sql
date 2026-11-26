@@ -42,6 +42,13 @@ CREATE TABLE IF NOT EXISTS bom_lines (
     qty_per_batch INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS suppliers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    phone TEXT,
+    gstin TEXT,
+    address TEXT
+);
 CREATE TABLE IF NOT EXISTS purchases (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     item_id INTEGER NOT NULL REFERENCES items(id),
@@ -77,7 +84,7 @@ CREATE TABLE IF NOT EXISTS stock_ledger (
     item_id INTEGER NOT NULL REFERENCES items(id),
     qty_change INTEGER NOT NULL,          -- + in, - out
     txn_type TEXT NOT NULL CHECK (txn_type IN
-        ('opening','purchase','production_use','production_output','damage','sale')),
+        ('opening','purchase','production_use','production_output','damage','sale','adjustment')),
     ref_table TEXT,
     ref_id INTEGER,
     txn_date TEXT NOT NULL DEFAULT (date('now')),

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="{{ url_for('reports.hub') }}">&larr; Reports Centre</a></p>
+<h2>{{ report.title }}</h2>
+<p>{{ period }}</p>
+
+<form method="get" class="plain">
+    <label>From</label>
+    <input type="date" name="date_from" value="{{ date_from }}" style="max-width:200px">
+    <label>To</label>
+    <input type="date" name="date_to" value="{{ date_to }}" style="max-width:200px">
+    <button type="submit">Filter</button>
+</form>
+
+<p>
+    <a href="{{ url_for('reports.export', name=name, fmt='csv', date_from=date_from, date_to=date_to) }}">Download CSV (opens in Excel)</a>
+    &nbsp;|&nbsp;
+    <a href="{{ url_for('reports.export', name=name, fmt='pdf', date_from=date_from, date_to=date_to) }}" target="_blank">Download PDF</a>
+</p>
+
+<div class="scroll">
+<table>
+    <tr>{% for h in report.headers %}<th>{{ h }}</th>{% endfor %}</tr>
+    {% for row in report.rows %}
+    <tr>
+        {% for cell in row %}
+        <td>{% if cell == 'FLAG' %}<span class="flag">FLAG</span>{% elif cell == 'TOTAL' %}<strong>TOTAL</strong>{% else %}{{ cell }}{% endif %}</td>
+        {% endfor %}
+    </tr>
+    {% else %}
+    <tr><td colspan="{{ report.headers|length }}">No data for this period</td></tr>
+    {% endfor %}
+</table>
+</div>
+{% endblock %}

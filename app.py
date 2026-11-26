@@ -32,7 +32,8 @@ def status_label(status, has_invoice=False):
 app.jinja_env.filters["rupees"] = rupees
 app.jinja_env.globals["status_label"] = status_label
 app.jinja_env.globals["qty_fmt"] = format_qty
-app.jinja_env.globals["app_name"] = "Snack Manufacturing Factory"
+app.jinja_env.globals["app_name"] = "SnackFlow ERP"
+app.jinja_env.globals["app_tagline"] = "Order-to-Audit Management System for Snack Manufacturing"
 
 # What each role sees on its dashboard: (title, description, page or None)
 MENUS = {
@@ -42,12 +43,14 @@ MENUS = {
     ],
     "admin": [
         ("Orders", "Approve, invoice, dispatch and record payments", "admin.orders"),
+        ("Reports Centre", "All reports with CSV and PDF export", "reports.hub"),
         ("Sales Register", "Invoices and PDF download", "reports.sales"),
         ("Outstanding", "Receivables by customer", "reports.outstanding"),
         ("Stock", "Raw, packing and finished goods", "production.stock"),
         ("Stock Ledger", "Every stock movement", "production.ledger"),
         ("Audit Log", "Who changed what, and when", "admin.audit"),
         ("Masters", "Products, customers, prices, recipes", "masters.index"),
+                ("Business Summary", "Orders, stock, variance, cost and dues at a glance", "owner.summary"),
     ],
     "production": [
         ("Purchases", "Record raw material receipts", "production.purchase"),
@@ -56,6 +59,7 @@ MENUS = {
         ("Stock Ledger", "Every stock movement", "production.ledger"),
     ],
     "accountant": [
+        ("Reports Centre", "All reports with CSV and PDF export", "reports.hub"),
         ("Sales Register", "Sales, customer-wise and product-wise", "reports.sales"),
         ("GST Summary", "Outward supplies for GSTR-1 / 3B", "reports.gst"),
         ("Outstanding", "Receivables with ageing", "reports.outstanding"),
@@ -66,6 +70,7 @@ MENUS = {
     ],
     "owner": [
         ("Business Summary", "Orders, stock, variance, cost and dues at a glance", "owner.summary"),
+        ("Reports Centre", "All reports with CSV and PDF export", "reports.hub"),
         ("Stock Levels", "Current balances", "production.stock"),
         ("Outstanding Dues", "Money to collect", "reports.outstanding"),
         ("Sales Register", "Sales and GST", "reports.sales"),
