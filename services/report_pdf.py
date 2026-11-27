@@ -1,7 +1,8 @@
 from datetime import date
 from fpdf import FPDF
 
-COMPANY = "Snack Manufacturing Factory"
+COMPANY = "SnackFlow ERP"
+TAGLINE = "Order-to-Audit Management System for Snack Manufacturing"
 
 
 def _clean(text):
@@ -45,6 +46,9 @@ def table_pdf(title, subtitle, headers, rows, weights=None):
 
     pdf.set_font("Helvetica", "B", 15)
     pdf.cell(0, 8, _clean(COMPANY), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 9)
+    pdf.cell(0, 5, _clean(TAGLINE), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 7, _clean(title), new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)

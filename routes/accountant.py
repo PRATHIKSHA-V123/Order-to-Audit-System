@@ -1,5 +1,6 @@
 import csv
 import io
+import zipfile
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from flask import Blueprint, render_template, request, Response, abort
@@ -417,3 +418,51 @@ def invoice_pdf(invoice_id):
         return "Invoice not found", 404
     return Response(data, mimetype="application/pdf",
                     headers={"Content-Disposition": f"inline; filename=invoice-{invoice_id}.pdf"})
+@accountant_bp.route("/audit-pack.zip")
+@role_required(*ROLES)
+def audit_pack():
+    """One ZIP for the auditor: every report as a PDF, plus the audit log."""
+    d_from = request.args.get("date_from", "")
+    d_to = request.args.get("date_to", "")
+    period = period_text(d_from, d_to)
+    conn = get_connection()
+    buf = io.BytesIO()
+    names = []
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        n = 0
+        for key, builder in BUILDERS.items():
+            n += 1
+            report = builder(conn, d_from, d_to)
+            pdf = table_pdf(report["title"], period + "   |   Amounts in Rs",
+                            report["headers"], report["rows"], report["weights"])
+            fname = f"{n:02d}_{report['file']}.pdf"
+            z.writestr(fname, pdf)
+            names.append(f"{fname}  -  {report['title']}")
+
+        where, params = date_filter("date(a.created_at)", d_from, d_to)
+        audit_rows = conn.execute(
+            "SELECT a.created_at, u.full_name, a.action, a.table_name, a.record_id, "
+            "a.old_value, a.new_value FROM audit_log a "
+            "LEFT JOIN users u ON u.id = a.user_id WHERE 1=1" + where + " ORDER BY a.id",
+            params).fetchall()
+        data = [[r["created_at"], r["full_name"] or "-", r["action"],
+                 f"{r['table_name']} #{r['record_id']}", r["old_value"] or "",
+                 r["new_value"] or ""] for r in audit_rows]
+        n += 1
+        fname = f"{n:02d}_audit_log.pdf"
+        z.writestr(fname, table_pdf(
+            "Audit Log", period + "   |   Times in UTC",
+            ["Time (UTC)", "User", "Action", "Record", "Old", "New"], data,
+            [2, 1.8, 2.2, 2, 2, 2.4]))
+        names.append(f"{fname}  -  Audit Log")
+
+        z.writestr("00_README.txt",
+                   "SnackFlow ERP - Audit Pack\n"
+                   f"Generated on {date.today().isoformat()}\n"
+                   f"{period}\n"
+                   "Cancelled invoices (with a credit note) are left out of the sales reports.\n\n"
+                   "Contents:\n" + "\n".join(names) + "\n")
+    conn.close()
+    return Response(buf.getvalue(), mimetype="application/zip",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=audit_pack_{date.today().isoformat()}.zip"})

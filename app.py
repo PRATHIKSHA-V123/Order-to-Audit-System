@@ -50,6 +50,7 @@ MENUS = {
         ("Stock Ledger", "Every stock movement", "production.ledger"),
         ("Audit Log", "Who changed what, and when", "admin.audit"),
         ("Order Trace", "Follow one order from start to audit", "admin.trace"),
+        ("Audit Pack", "Download all reports as one ZIP for the auditor", "reports.audit_pack"),
         ("Masters", "Products, customers, prices, recipes", "masters.index"),
         ("Business Summary", "Orders, stock, variance, cost and dues at a glance", "owner.summary"),
     ],
@@ -69,6 +70,7 @@ MENUS = {
         ("Stock Report (CSV)", "Download for Excel", "reports.stock_csv"),
         ("Audit Log", "Who changed what, and when", "admin.audit"),
         ("Order Trace", "Follow one order from start to audit", "admin.trace"),
+        ("Audit Pack", "Download all reports as one ZIP for the auditor", "reports.audit_pack"),
     ],
     "owner": [
         ("Business Summary", "Orders, stock, variance, cost and dues at a glance", "owner.summary"),
@@ -78,6 +80,7 @@ MENUS = {
         ("Sales Register", "Sales and GST", "reports.sales"),
         ("Audit Log", "Who changed what, and when", "admin.audit"),
         ("Order Trace", "Follow one order from start to audit", "admin.trace"),
+        ("Audit Pack", "Download all reports as one ZIP for the auditor", "reports.audit_pack"),
     ],
 }
 
