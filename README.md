@@ -1,11 +1,10 @@
-Demo video link:https://youtu.be/piXRpAtu2S8?si=0dY5t6dzbst6jDum
-
 # SnackFlow ERP: Order-to-Audit Management System for Snack Manufacturing
 
-Internship shortlisting task, Centre for Digital Infrastructure, NIT Tiruchirappalli.
-One system from a salesman's order to the auditor's monthly report, for a small South Indian snack factory.
+**Internship Shortlisting Task – Centre for Digital Infrastructure, NIT Tiruchirappalli**
 
-- **Demo video (unlisted):** PASTE-YOUR-VIDEO-LINK-HERE
+- **GitHub Repository:** https://github.com/PRATHIKSHA-V123/Order-to-Audit-System
+- **Live Application:** https://order-to-audit-system-9a4a.onrender.com
+- **Demo Video:** https://youtu.be/piXRpAtu2S8?si=0dY5t6dzbst6jDum
 - **Design note:** see `DESIGN.md`
 
 ## Stack and why
