@@ -102,6 +102,7 @@ def order_detail(order_id):
 @admin_bp.route("/orders/<int:order_id>/qty", methods=["POST"])
 @role_required("admin")
 def update_qty(order_id):
+    """Admin can change quantities and prices of a pending order. Every change is logged."""
     def act(conn):
         status = conn.execute("SELECT status FROM orders WHERE id = ?", (order_id,)).fetchone()["status"]
         if status != "pending":
@@ -117,7 +118,23 @@ def update_qty(order_id):
                     if old != qty:
                         svc.edit_line_qty(conn, line_id, qty)
                         log(conn, "order_lines", line_id, "QTY_CHANGED", old, qty, session["user_id"])
-    return run_action(order_id, act, "Quantities saved")
+            elif key.startswith("rate_") and value.strip():
+                try:
+                    new_rate = int((Decimal(value) * 100).to_integral_value())
+                except InvalidOperation:
+                    raise ValueError("Enter a valid price")
+                if new_rate <= 0:
+                    continue
+                line_id = int(key[5:])
+                old_rate = conn.execute(
+                    "SELECT rate_paise FROM order_lines WHERE id = ?", (line_id,)
+                ).fetchone()["rate_paise"]
+                if old_rate != new_rate:
+                    conn.execute("UPDATE order_lines SET rate_paise = ? WHERE id = ?",
+                                 (new_rate, line_id))
+                    log(conn, "order_lines", line_id, "PRICE_CHANGED", old_rate, new_rate,
+                        session["user_id"])
+    return run_action(order_id, act, "Quantities and prices saved")
 
 
 @admin_bp.route("/orders/<int:order_id>/approve", methods=["POST"])
@@ -199,6 +216,8 @@ def audit():
     ).fetchall()
     conn.close()
     return render_template("admin/audit.html", rows=rows)
+
+
 @admin_bp.route("/trace")
 @role_required("admin", "accountant", "owner")
 def trace():

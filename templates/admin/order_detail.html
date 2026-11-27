@@ -16,7 +16,11 @@
     {% for l in lines %}
     <tr>
         <td>{{ l.name }}</td>
-        <td>{{ l.rate_paise | rupees }}</td>
+        <td>
+            {% if order.status == 'pending' %}
+            <input type="number" step="0.01" min="0.01" name="rate_{{ l.id }}" value="{{ '%.2f' % (l.rate_paise / 100) }}" style="width:110px">
+            {% else %}{{ l.rate_paise | rupees }}{% endif %}
+        </td>
         <td>
             {% if order.status == 'pending' %}
             <input type="number" min="1" name="qty_{{ l.id }}" value="{{ l.qty_ordered }}" style="width:100px">
@@ -29,7 +33,7 @@
 </table>
 </div>
 {% if order.status == 'pending' %}
-<button type="submit">Save quantities</button>
+<button type="submit">Save quantities and prices</button>
 </form>
 {% endif %}
 

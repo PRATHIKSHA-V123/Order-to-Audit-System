@@ -24,7 +24,7 @@ def find_order_id(conn, text):
 
 
 KIND_BY_ACTION = {
-    "QTY_CHANGED": "qty", "APPROVED": "good", "REJECTED": "bad",
+    "QTY_CHANGED": "qty", "PRICE_CHANGED": "qty", "APPROVED": "good", "REJECTED": "bad",
     "INVOICE_CREATED": "invoice", "DISPATCHED": "ship",
     "PAYMENT_RECORDED": "good", "INVOICE_CANCELLED": "bad",
 }
@@ -81,6 +81,9 @@ def build_trace(conn, order_id):
         if act == "QTY_CHANGED":
             name = line_names.get(a["record_id"], "Line")
             return "Quantity changed", f"{name}: {a['old_value']} to {a['new_value']}"
+        if act == "PRICE_CHANGED":
+            name = line_names.get(a["record_id"], "Line")
+            return "Price changed", f"{name}: {money(int(a['old_value']))} to {money(int(a['new_value']))}"
         if act == "APPROVED":
             return "Order approved", "Status changed from pending to approved"
         if act == "REJECTED":
