@@ -1,3 +1,5 @@
+Demo video link:https://youtu.be/piXRpAtu2S8?si=0dY5t6dzbst6jDum
+
 # SnackFlow ERP: Order-to-Audit Management System for Snack Manufacturing
 
 Internship shortlisting task, Centre for Digital Infrastructure, NIT Tiruchirappalli.
