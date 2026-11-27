@@ -23,7 +23,7 @@ erDiagram
 
 ## 2. How stock is computed
 Stock is never typed in. Every change writes one row in `stock_ledger` (`qty_change`, `txn_type`, and the source table and id). **Balance = SUM(qty_change)** for the item.
-Sources: opening, purchase, production use, damage, production output, sale (dispatch), and the return from a credit note. `add_movement` refuses any movement that would push a balance below zero. Because there is one write path, the ledger and the balances cannot disagree.
+Sources: opening, purchase, production use, damage, production output, sale (dispatch), the return from a credit note, and manual adjustment (reason required, also written to the audit log). `add_movement` refuses any movement that would push a balance below zero. Because there is one write path, the ledger and the balances cannot disagree.
 
 ## 3. How BOM consumption is computed
 `bom_header` stores the expected packets per batch. `bom_lines` stores the quantity of each material per batch, in base units.
@@ -49,3 +49,5 @@ Weighted average purchase rate per base unit (opening stock counts as a purchase
 - Every ledger row links to its source document.
 - The audit log records user and time for approvals, quantity edits, invoices, dispatch, payments, cancellations and production runs.
 - 16 automatic tests cover stock, GST and the section 5 benchmark.
+## 7. Traceability views
+The Order-to-Audit Trace page joins one order to its invoice, payments, credit note, linked stock ledger rows and audit entries and shows them as one timeline. The Audit Pack downloads the nine reports and the audit log as a ZIP of PDFs.
