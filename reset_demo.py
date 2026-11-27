@@ -1,6 +1,6 @@
 import os
 from database.db import get_connection
-from seed import seed_users, seed_master
+from seed import seed_users, seed_master, seed_extra_products
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -17,6 +17,7 @@ with open(os.path.join(HERE, "database", "schema.sql"), encoding="utf-8") as f:
     conn.executescript(f.read())
 seed_users(conn)
 seed_master(conn)
+seed_extra_products(conn)
 conn.commit()
 conn.close()
 print("Demo database reset. Opening stock is loaded and no orders exist.")

@@ -2,7 +2,8 @@ from fpdf import FPDF
 from services.gst import rupees, FACTORY_STATE
 
 # Demo seller details (assumption: written in the README)
-SELLER_NAME = "South Indian Snacks (demo)"
+SELLER_NAME = "SnackFlow ERP"
+SELLER_TAGLINE = "Order-to-Audit Management System for Snack Manufacturing"
 SELLER_GSTIN = "33AAAAA9999A1Z5"
 SELLER_ADDRESS = "Tiruchirappalli, Tamil Nadu"
 
@@ -37,6 +38,7 @@ def build_invoice_pdf(conn, invoice_id):
     pdf.set_font("Helvetica", "B", 16)
     pdf.cell(0, 9, "TAX INVOICE", align="C", new_x="LMARGIN", new_y="NEXT")
     _line(pdf, SELLER_NAME, 6, bold=True)
+    _line(pdf, SELLER_TAGLINE)
     _line(pdf, SELLER_ADDRESS)
     _line(pdf, f"GSTIN: {SELLER_GSTIN}   |   State: {FACTORY_STATE}")
     pdf.ln(3)

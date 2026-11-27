@@ -22,6 +22,17 @@ ITEMS = [
     ("Murukku 200 g", "finished", "pc", 5000, 5, "2106"),
 ]
 
+# Extra products for the demo only. They are NOT loaded by the tests or the benchmark,
+# so the section 5 numbers stay exactly as the task expects.
+# (name, price in paise, gst %, hsn, opening packets)
+EXTRA_PRODUCTS = [
+    ("Mixture 200 g", 4500, 5, "2106", 100),
+    ("Potato Chips 150 g", 3000, 5, "2005", 100),
+    ("Mysore Pak 250 g", 12000, 5, "2106", 60),
+    ("Palgova 250 g", 11000, 5, "2106", 60),
+    ("Laddu 250 g", 10000, 5, "2106", 60),
+]
+
 # (name, gstin, state, phone, address) - dummy data
 CUSTOMERS = [
     ("Retailer A", "33AAAAA0000A1Z5", "Tamil Nadu", "9000000001", "Coimbatore"),
@@ -95,10 +106,24 @@ def seed_master(conn):
         add_movement(conn, product_id, 50, "opening", None, None, "Opening finished goods")
 
 
+def seed_extra_products(conn):
+    """Demo-only products with opening finished stock. Used by reset_demo.py, not by the tests."""
+    for name, price, gst, hsn, packets in EXTRA_PRODUCTS:
+        conn.execute(
+            "INSERT OR IGNORE INTO items (name, item_type, unit, price_paise, gst_percent, hsn_code) "
+            "VALUES (?, 'finished', 'pc', ?, ?, ?)",
+            (name, price, gst, hsn),
+        )
+        item_id = conn.execute("SELECT id FROM items WHERE name = ?", (name,)).fetchone()["id"]
+        if not conn.execute("SELECT 1 FROM stock_ledger WHERE item_id = ?", (item_id,)).fetchone():
+            add_movement(conn, item_id, packets, "opening", None, None, "Opening finished goods")
+
+
 if __name__ == "__main__":
     conn = get_connection()
     seed_users(conn)
     seed_master(conn)
+    seed_extra_products(conn)
     conn.commit()
     conn.close()
     print("Seed data loaded")
